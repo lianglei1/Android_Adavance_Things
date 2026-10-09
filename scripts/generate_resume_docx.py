@@ -1,3 +1,4 @@
+import argparse
 from pathlib import Path
 import re
 
@@ -9,8 +10,7 @@ from docx.shared import Cm, Pt, RGBColor
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = ROOT / "resume" / "梁磊-Android端侧AI-AIOS架构师.md"
-OUTPUT = ROOT / "resume" / "梁磊-Android端侧AI-AIOS架构师.docx"
+DEFAULT_SOURCE = ROOT / "resume" / "梁磊-Android端侧AI-AIOS架构师.md"
 
 FONT_CN = "微软雅黑"
 FONT_EN = "Aptos"
@@ -94,7 +94,7 @@ def add_bullet(document, text):
     add_inline(paragraph, text)
 
 
-def build_document():
+def build_document(source, output):
     document = Document()
     section = document.sections[0]
     section.top_margin = Cm(1.35)
@@ -112,7 +112,7 @@ def build_document():
     bullet_style._element.rPr.rFonts.set(qn("w:eastAsia"), FONT_CN)
     bullet_style.font.size = Pt(9.5)
 
-    lines = SOURCE.read_text(encoding="utf-8").splitlines()
+    lines = source.read_text(encoding="utf-8").splitlines()
     for line in lines:
         stripped = line.strip()
         if not stripped:
@@ -127,7 +127,7 @@ def build_document():
             add_bullet(document, stripped[2:])
         else:
             paragraph = document.add_paragraph()
-            if stripped.startswith("**Android 端侧"):
+            if stripped.startswith(("**Android 端侧", "**车载 Android")):
                 paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
                 paragraph_format(paragraph, after=2)
                 add_inline(paragraph, stripped, size=11, color=ACCENT)
@@ -144,13 +144,18 @@ def build_document():
                 add_inline(paragraph, stripped)
 
     core_properties = document.core_properties
-    core_properties.title = "梁磊 - Android端侧AI / AIOS Agent架构师"
+    core_properties.title = source.stem
     core_properties.subject = "求职简历"
     core_properties.author = "梁磊"
 
-    document.save(OUTPUT)
-    print(OUTPUT)
+    document.save(output)
+    print(output)
 
 
 if __name__ == "__main__":
-    build_document()
+    parser = argparse.ArgumentParser(description="Generate a formatted resume DOCX from Markdown.")
+    parser.add_argument("source", nargs="?", type=Path, default=DEFAULT_SOURCE)
+    args = parser.parse_args()
+    source = args.source.resolve()
+    output = source.with_suffix(".docx")
+    build_document(source, output)
